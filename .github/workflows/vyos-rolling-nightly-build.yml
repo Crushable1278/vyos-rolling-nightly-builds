@@ -188,7 +188,3 @@ jobs:
           tagging_message: ${{ needs.build_iso.outputs.build_version }}
           commit_message: ${{ needs.build_iso.outputs.build_version }}
           commit_author: "vyosbot <${{ needs.build_iso.outputs.BUILD_BY }}>"
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64

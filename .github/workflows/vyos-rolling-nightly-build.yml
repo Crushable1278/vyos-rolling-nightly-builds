@@ -91,35 +91,6 @@ jobs:
           echo "PREVIOUS_SUCCESS_BUILD_TIMESTAMP=$(cat version.json | jq -r '.[0].timestamp')" | tee -a $GITHUB_OUTPUT
           echo "BUILD_BY=$BUILD_BY" | tee -a $GITHUB_OUTPUT
 
-      - name: Clone vyos-build source code
-        uses: actions/checkout@v4
-        with:
-          repository: vyos/vyos-build
-          path: vyos-build
-
-      - name: Build generic ISO image
-        id: build_generic_iso
-        run: |
-          cd vyos-build
-          sudo --preserve-env ./build-vyos-image \
-          --architecture amd64 \
-          --build-by $BUILD_BY \
-          --build-type release \
-          --custom-package vyos-1x-smoketest \
-          --debian-mirror $DEBIAN_MIRROR \
-          --version ${{ steps.set_env_variables.outputs.build_version }} \
-          --vyos-mirror $VYOS_MIRROR \
-          generic
-          # move artifact one level up for minisign
-          mv build/vyos-${{ steps.set_env_variables.outputs.build_version }}-generic-amd64.iso ..
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: vyos-${{ steps.set_env_variables.outputs.build_version }}-generic-amd64
-          path: vyos-${{ steps.set_env_variables.outputs.build_version }}-*
-          retention-days: 30
-          if-no-files-found: error
-
   publish:
     needs:
       - build_iso
@@ -139,13 +110,14 @@ jobs:
         with:
           repository: vyos/vyos-1x
           path: vyos-1x
-      -  id: commit_ids
-         shell: bash
-         run: |
+      - id: commit_ids
+        shell: bash
+        run: |
+          ls -al
           cd vyos-build
-          echo "CHANGELOG_COMMIT_VYOS_BUILD=$(git log --since "${{ needs.build_iso.outputs.PREVIOUS_SUCCESS_BUILD_TIMESTAMP }}" --format="%H" --reverse | head -n1)" | tee -a $GITHUB_OUTPUT
+          echo "CHANGELOG_COMMIT_VYOS_BUILD=$(git log --since "${PREVIOUS_SUCCESS_BUILD_TIME}" --format="%H" --reverse | head -n1)" | tee -a $GITHUB_OUTPUT
           cd ../vyos-1x
-          echo "CHANGELOG_COMMIT_VYOS_1X=$(git log --since "${{ needs.build_iso.outputs.PREVIOUS_SUCCESS_BUILD_TIMESTAMP }}" --format="%H" --reverse | head -n1)" | tee -a $GITHUB_OUTPUT
+          echo    "CHANGELOG_COMMIT_VYOS_1X=$(git log --since "${PREVIOUS_SUCCESS_BUILD_TIME}" --format="%H" --reverse | head -n1)" | tee -a $GITHUB_OUTPUT
 
       - name: "Release publishing: generate changelog for vyos-1x"
         id: generate_changelog_for_vyos-1x
@@ -218,13 +190,3 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64
-
-      - name: "Release publishing: publish release"
-        uses: softprops/action-gh-release@v2
-        with:
-          body_path: CHANGELOG.md
-          tag_name: ${{ needs.build_iso.outputs.build_version }}
-          fail_on_unmatched_files: true
-          files: |
-            ./vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64.iso
-            ./vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64.iso.minisig

@@ -115,8 +115,10 @@ jobs:
         run: |
           ls -al
           cd vyos-build
+          git log --since "${PREVIOUS_SUCCESS_BUILD_TIME}" --format="%H" --reverse | head -n1
           echo "CHANGELOG_COMMIT_VYOS_BUILD=$(git log --since "${PREVIOUS_SUCCESS_BUILD_TIME}" --format="%H" --reverse | head -n1)" | tee -a $GITHUB_OUTPUT
           cd ../vyos-1x
+          git log --since "${PREVIOUS_SUCCESS_BUILD_TIME}" --format="%H" --reverse | head -n1
           echo    "CHANGELOG_COMMIT_VYOS_1X=$(git log --since "${PREVIOUS_SUCCESS_BUILD_TIME}" --format="%H" --reverse | head -n1)" | tee -a $GITHUB_OUTPUT
 
       - name: "Release publishing: generate changelog for vyos-1x"

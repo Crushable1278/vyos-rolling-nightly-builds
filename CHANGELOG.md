@@ -1,12 +1,8 @@
 ## vyos-1x
-- op-mode: T6503: "restart ssh" command not working
-   - PR: vyos/vyos-1x#3702
 - GitHub: T6494: add workflow to build custom ISO for integration tests
    - PR: vyos/vyos-1x#3703
 - T6511: add circinus branch to workflow
    - PR: vyos/vyos-1x#3710
-- configd: T6504: send sudo_user on session init and set env variable
-   - PR: vyos/vyos-1x#3701
 - op-mode: T6514: rework the "show system storage" code to handle live CD systems correctly
    - PR: vyos/vyos-1x#3718
 - T3900: extend latest fix for firewall raw implementation to ipv6.
@@ -23,8 +19,6 @@
    - PR: vyos/vyos-1x#3729
 - T6313: Add "NAT" to "generate" command for rule resequence
    - PR: vyos/vyos-1x#3715
-- T6497: CGNAT refactoring delete conntrack entries
-   - PR: vyos/vyos-1x#3699
 - op-mode: T5633, T6465: fix error when op cmd interrupted, updates some system call syntax
    - PR: vyos/vyos-1x#3731
 - pppoe-server: T5710: Add option permit any-login
@@ -169,8 +163,6 @@
    - PR: vyos/vyos-1x#3883
 - T6572: trigger remote pr only for circinus pr merge
    - PR: vyos/vyos-1x#3899
-- system: op-mode: T3334: allow delayed getty restart when configuring serial ports
-   - PR: vyos/vyos-1x#3698
 - T6486: T6379: Rewrite generate openvpn client-config
    - PR: vyos/vyos-1x#3747
 - GitHub: T6560: action must be run on forked repo
@@ -255,11 +247,11 @@
    - PR: vyos/vyos-1x#4001
 - T6561: Add vrf aware for show ntp
    - PR: vyos/vyos-1x#4003
+- dhclient: T6667: Added workaround for communication with FRR
+   - PR: vyos/vyos-1x#4002
 
 
 ## vyos-build
-- pmacct: T5663: the garbage headers issue fix
-   - PR: vyos/vyos-build#441
 - keepalived:T5402:Added patch with arp_ignore to 1 on IPv6 VMACs
    - PR: vyos/vyos-build#442
 - T5695: Add LUA script to build FRR

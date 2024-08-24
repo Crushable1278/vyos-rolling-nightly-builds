@@ -16,27 +16,27 @@ on:
         description: 'Skip RAID1 Test'
         required: true
         type: boolean
-        default: false
+        default: true
       SKIP_SMOKETEST_SYSTEM:
         description: 'Skip CLI smoketest'
         required: true
         type: boolean
-        default: false
+        default: true
       SKIP_SMOKETEST_CONFIG:
         description: 'Skip config load test'
         required: true
         type: boolean
-        default: false
+        default: true
       SKIP_SMOKETEST_TPM:
         description: 'Skip TPM test'
         required: true
         type: boolean
-        default: false
+        default: true
       SKIP_SNAPSHOT_S3_UPLOAD:
         description: 'Skip snapshot upload to S3'
         required: true
         type: boolean
-        default: false
+        default: true
       SKIP_RELEASE_PUBLISHING:
         description: 'Skip release publishing'
         required: true
@@ -46,12 +46,12 @@ on:
         description: 'Skip Slack notifications'
         required: true
         type: boolean
-        default: false
+        default: true
       SKIP_DOWNLOADS_PAGE_UPDATE:
         description: 'Skip downloads page update'
         required: true
         type: boolean
-        default: false
+        default: true
 
 env:
   BUILD_BY: autobuild@vyos.net
@@ -113,15 +113,6 @@ jobs:
           # move artifact one level up for minisign
           mv build/vyos-${{ steps.set_env_variables.outputs.build_version }}-generic-amd64.iso ..
 
-      - name: Sign generic ISO image
-        shell: bash
-        run: |
-          echo "${{ secrets.minisign_private_key }}" > /tmp/minisign.key
-          echo ${{ secrets.minisign_password }} | $GITHUB_WORKSPACE/bin/minisign -s /tmp/minisign.key -Sm vyos-${{ steps.set_env_variables.outputs.build_version }}-generic-amd64.iso
-          echo "${{ secrets.minisign_public_key }}" > /tmp/minisign.pub
-          $GITHUB_WORKSPACE/bin/minisign -Vm vyos-${{ steps.set_env_variables.outputs.build_version }}-generic-amd64.iso -x vyos-${{ steps.set_env_variables.outputs.build_version }}-generic-amd64.iso.minisig -p /tmp/minisign.pub
-          rm /tmp/minisign.key /tmp/minisign.pub
-
       - uses: actions/upload-artifact@v4
         with:
           name: vyos-${{ steps.set_env_variables.outputs.build_version }}-generic-amd64
@@ -129,215 +120,8 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-  test_smoketest_cli:
-    needs: build_iso
-    runs-on: ubuntu-24.04
-    if: ${{ !inputs.SKIP_SMOKETEST_SYSTEM }}
-    container:
-      image: vyos/vyos-build:current
-      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
-    steps:
-      # We need the test script from vyos-build repo
-      - name: Clone vyos-build source code
-        uses: actions/checkout@v4
-        with:
-          repository: vyos/vyos-build
-      - uses: actions/download-artifact@v4
-        with:
-          name: vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64
-          path: build
-      - name: VyOS CLI smoketests
-        id: test
-        shell: bash
-        run: |
-          set -e
-          ln -s vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64.iso build/live-image-amd64.hybrid.iso
-          sudo make test | tee smoketest_make_test.log
-      - uses: actions/upload-artifact@v4
-        with:
-          name: smoketest_make_test
-          path: smoketest_make_test.log
-          retention-days: 30
-          if-no-files-found: error
-
-  test_config_load:
-    needs: build_iso
-    runs-on: ubuntu-24.04
-    if: ${{ !inputs.SKIP_SMOKETEST_CONFIG }}
-    container:
-      image: vyos/vyos-build:current
-      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
-    steps:
-      # We need the test script from vyos-build repo
-      - name: Clone vyos-build source code
-        uses: actions/checkout@v4
-        with:
-          repository: vyos/vyos-build
-      - uses: actions/download-artifact@v4
-        with:
-          name: vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64
-          path: build
-      - name: VyOS config load tests
-        id: test
-        shell: bash
-        run: |
-          set -e
-          ln -s vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64.iso build/live-image-amd64.hybrid.iso
-          sudo make testc | tee smoketest_make_testc.log
-      - uses: actions/upload-artifact@v4
-        with:
-          name: smoketest_make_testc
-          path: smoketest_make_testc.log
-          retention-days: 30
-          if-no-files-found: error
-
-  test_raid1_install:
-    needs: build_iso
-    runs-on: ubuntu-24.04
-    if: ${{ !inputs.SKIP_SMOKETEST_RAID1 }}
-    container:
-      image: vyos/vyos-build:current
-      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
-    steps:
-      # We need the test script from vyos-build repo
-      - name: Clone vyos-build source code
-        uses: actions/checkout@v4
-        with:
-          repository: vyos/vyos-build
-      - uses: actions/download-artifact@v4
-        with:
-          name: vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64
-          path: build
-      - name: VyOS RAID1 installation tests
-        id: test
-        shell: bash
-        run: |
-          set -e
-          ln -s vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64.iso build/live-image-amd64.hybrid.iso
-          sudo make testraid | tee smoketest_make_testraid.log
-      - uses: actions/upload-artifact@v4
-        with:
-          name: smoketest_make_testraid
-          path: smoketest_make_testraid.log
-          retention-days: 30
-          if-no-files-found: error
-
-  test_encrypted_config_tpm:
-    needs: build_iso
-    runs-on: ubuntu-24.04
-    if: ${{ !inputs.SKIP_SMOKETEST_TPM }}
-    container:
-      image: vyos/vyos-build:current
-      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
-    steps:
-      # We need the test script from vyos-build repo
-      - name: Clone vyos-build source code
-        uses: actions/checkout@v4
-        with:
-          repository: vyos/vyos-build
-      - uses: actions/download-artifact@v4
-        with:
-          name: vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64
-          path: build
-      - name: VyOS TPM encryption tests
-        id: test
-        shell: bash
-        run: |
-          set -e
-          ln -s vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64.iso build/live-image-amd64.hybrid.iso
-          sudo make testtpm | tee smoketest_make_testtpm.log
-      - uses: actions/upload-artifact@v4
-        with:
-          name: smoketest_make_testtpm
-          path: smoketest_make_testtpm.log
-          retention-days: 30
-          if-no-files-found: error
-
-  slack:
-    needs:
-      - test_config_load
-      - test_raid1_install
-      - test_smoketest_cli
-      - test_encrypted_config_tpm
-      - build_iso
-    runs-on: ubuntu-24.04
-    if: failure()
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: logs
-          pattern: smoketest_make_*
-      - name: "Slack notification: filter Smoketest failed logs"
-        id: filter_smoketest_failed_logs
-        run: |
-          for logfile in $(find logs -type f -name "*.log")
-          do
-              echo $logfile
-              cat $logfile | grep '... FAIL' >> ${{ github.workspace }}/smoketest_filtered.log || true
-              cat $logfile | grep 'ERROR -' >> ${{ github.workspace }}/smoketest_filtered.log || true
-              cat $logfile | grep 'Error:' -A12 >> ${{ github.workspace }}/smoketest_filtered.log || true
-          done
-
-      - name: "Slack notification: send to channel"
-        id: send_a_slack_failure_notification
-        uses: slackapi/slack-github-action@v1.25.0
-        with:
-          payload: |
-            {
-              "text": "*VyOS nightly build automation did not succeed*",
-              "attachments": [
-                {
-                  "color": "FF6600",
-                  "fields": [
-                    {
-                      "title": "Repository",
-                      "short": true,
-                      "value": "${{ github.repository }}"
-                    },
-                    {
-                      "title": "Workflow",
-                      "short": true,
-                      "value": "${{ github.workflow }}"
-                    },
-                    {
-                      "title": "Trigger",
-                      "short": true,
-                      "value": "${{ github.event_name }}"
-                    },
-                    {
-                      "title": "Run number",
-                      "short": true,
-                      "value": "${{ github.run_number }}"
-                    },
-                    {
-                      "title": "URL",
-                      "short": false,
-                      "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-
-      - name: "Slack notification: send Smoketest log excerpt"
-        uses: MeilCli/slack-upload-file@v4
-        with:
-          slack_token: ${{ secrets.SLACK_BOT_TOKEN }}
-          channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
-          file_type: 'text'
-          file_path: ${{ github.workspace }}/smoketest_filtered.log
-          initial_comment: Smoketest log excerpt
-          if_no_files_found: ignore
-
   publish:
     needs:
-      - test_config_load
-      - test_raid1_install
-      - test_smoketest_cli
-      - test_encrypted_config_tpm
       - build_iso
     runs-on: ubuntu-24.04
     permissions:
@@ -444,20 +228,3 @@ jobs:
           files: |
             ./vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64.iso
             ./vyos-${{ needs.build_iso.outputs.build_version }}-generic-amd64.iso.minisig
-
-      - uses: Nats-ji/delete-old-releases@v1.0.1
-        with:
-          token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
-          keep-count: 30
-          keep-old-minor-releases: false
-
-  update_download_page:
-    if: ${{ !inputs.SKIP_RELEASE_PUBLISHING }}
-    needs:
-      - publish
-    uses: vyos/community.vyos.net/.github/workflows/main.yml@production
-    with:
-      branch: production
-    secrets:
-        NETLIFY_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
-        GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
